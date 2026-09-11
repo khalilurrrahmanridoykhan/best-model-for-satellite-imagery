@@ -49,6 +49,8 @@ data/yolo/data.yaml
 data/yolo/train.txt
 data/yolo/val.txt
 data/yolo/test.txt
+data/yolo/labels.cache
+data/unet/labels.cache
 runs/
 *.pt
 *.pth
