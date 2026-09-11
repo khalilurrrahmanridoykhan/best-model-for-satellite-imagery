@@ -46,6 +46,9 @@ data/yolo/labels/*
 !data/yolo/labels/.gitkeep
 data/split.json
 data/yolo/data.yaml
+data/yolo/train.txt
+data/yolo/val.txt
+data/yolo/test.txt
 runs/
 *.pt
 *.pth
