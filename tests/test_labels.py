@@ -19,6 +19,15 @@ from src.labels import (
 # so a polygon's coordinates can be reasoned about directly as pixels.
 IDENTITY_TRANSFORM = Affine.identity()
 
+# A transform resembling a *real* georeferenced chip (see
+# test_polygon_to_yolo_box_handles_a_real_georeferenced_transform below)
+# -- origin at a real-looking longitude/latitude, ~1.2m pixels. Live-
+# caught bug this exists to guard against: an identity transform makes
+# geographic-space and pixel-space coordinates coincide by construction,
+# which silently hid a real unit-mismatch bug that only showed up
+# against the actual downloaded SpaceNet data.
+GEOREFERENCED_TRANSFORM = Affine(1.0761e-05, 0.0, -115.3075176, 0.0, -1.0761e-05, 36.1282976997)
+
 
 def test_rasterize_polygons_burns_a_square_into_the_mask():
     square = Polygon([(2, 2), (2, 5), (5, 5), (5, 2)])
@@ -56,7 +65,7 @@ def test_polygon_to_yolo_box_centers_and_normalizes_correctly():
     # 100x100 image -- center should land at (15, 20)/100.
     box = Polygon([(10, 10), (10, 30), (20, 30), (20, 10)])
 
-    cls, x, y, w, h = polygon_to_yolo_box(box, image_width=100, image_height=100)
+    cls, x, y, w, h = polygon_to_yolo_box(box, image_width=100, image_height=100, transform=IDENTITY_TRANSFORM)
 
     assert cls == 0
     assert x == pytest.approx(0.15)
@@ -67,15 +76,39 @@ def test_polygon_to_yolo_box_centers_and_normalizes_correctly():
 
 def test_polygon_to_yolo_box_respects_a_custom_class_id():
     box = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
-    cls, *_ = polygon_to_yolo_box(box, image_width=100, image_height=100, class_id=3)
+    cls, *_ = polygon_to_yolo_box(box, image_width=100, image_height=100, transform=IDENTITY_TRANSFORM, class_id=3)
     assert cls == 3
+
+
+def test_polygon_to_yolo_box_handles_a_real_georeferenced_transform():
+    """Live-caught bug: against the actual downloaded SpaceNet data (real
+    lon/lat polygons, a real Affine transform), the original
+    implementation naively divided geographic-CRS bounds by a pixel
+    count and produced box coordinates wildly outside [0, 1]. A polygon
+    covering the chip's full extent (as returned by rasterio's own
+    transform * (width, height)) must map back to a box spanning
+    essentially the whole normalized [0, 1] range.
+    """
+    width, height = 650, 650
+    top_left = GEOREFERENCED_TRANSFORM @ (0, 0)
+    bottom_right = GEOREFERENCED_TRANSFORM @ (width, height)
+    min_x, max_x = sorted([top_left[0], bottom_right[0]])
+    min_y, max_y = sorted([top_left[1], bottom_right[1]])
+    full_extent = Polygon([(min_x, min_y), (min_x, max_y), (max_x, max_y), (max_x, min_y)])
+
+    cls, x, y, w, h = polygon_to_yolo_box(full_extent, width, height, transform=GEOREFERENCED_TRANSFORM)
+
+    assert 0.0 <= x <= 1.0
+    assert 0.0 <= y <= 1.0
+    assert w == pytest.approx(1.0, abs=1e-6)
+    assert h == pytest.approx(1.0, abs=1e-6)
 
 
 def test_polygons_to_yolo_boxes_returns_one_box_per_polygon_in_order():
     a = Polygon([(0, 0), (0, 10), (10, 10), (10, 0)])
     b = Polygon([(50, 50), (50, 60), (60, 60), (60, 50)])
 
-    boxes = polygons_to_yolo_boxes([a, b], image_width=100, image_height=100)
+    boxes = polygons_to_yolo_boxes([a, b], image_width=100, image_height=100, transform=IDENTITY_TRANSFORM)
 
     assert len(boxes) == 2
     assert boxes[0][1] == pytest.approx(0.05)  # a's x_center
@@ -83,7 +116,7 @@ def test_polygons_to_yolo_boxes_returns_one_box_per_polygon_in_order():
 
 
 def test_polygons_to_yolo_boxes_handles_an_empty_list():
-    assert polygons_to_yolo_boxes([], image_width=100, image_height=100) == []
+    assert polygons_to_yolo_boxes([], image_width=100, image_height=100, transform=IDENTITY_TRANSFORM) == []
 
 
 def test_format_yolo_label_file_matches_ultralytics_format():
@@ -106,7 +139,7 @@ def test_mask_and_boxes_agree_on_which_buildings_exist():
     polygons = [a, b]
 
     mask = rasterize_polygons(polygons, height=100, width=100, transform=IDENTITY_TRANSFORM)
-    boxes = polygons_to_yolo_boxes(polygons, image_width=100, image_height=100)
+    boxes = polygons_to_yolo_boxes(polygons, image_width=100, image_height=100, transform=IDENTITY_TRANSFORM)
 
     # Every YOLO box's center should land on a masked-in pixel.
     for _, x, y, _, _ in boxes:

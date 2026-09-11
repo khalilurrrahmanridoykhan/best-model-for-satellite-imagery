@@ -42,18 +42,39 @@ def polygon_to_yolo_box(
     polygon: BaseGeometry,
     image_width: int,
     image_height: int,
+    transform: Affine,
     class_id: int = 0,
 ) -> tuple[int, float, float, float, float]:
     """One polygon's axis-aligned bounding box, in YOLO's normalized
-    (class, x_center, y_center, width, height) format -- all four
-    geometry values in [0, 1], relative to the image's own width/height,
-    per Ultralytics' label format.
+    (class, x_center, y_center, width, height) format, per Ultralytics'
+    label format.
+
+    Live-caught bug this `transform` argument exists to fix: a real
+    SpaceNet polygon's coordinates are in the raster's own CRS (lon/lat
+    here), not pixel space -- naively dividing polygon.bounds by
+    image_width/image_height (as an earlier version of this function
+    did) mixes geographic-coordinate units with a pixel-count
+    denominator and produces nonsense (values wildly outside [0, 1]).
+    `transform` is the same rasterio Affine used to rasterize these same
+    polygons into a mask (rasterize_polygons above) -- its inverse maps
+    the polygon's geographic bounds into pixel space first, so a YOLO box
+    actually lines up with the mask it's meant to match. Checked against
+    all four corners of the bounding box, not just two, since a
+    rotated/skewed transform could otherwise map the geographic min/max
+    corner to something other than the pixel-space min/max corner.
     """
     min_x, min_y, max_x, max_y = polygon.bounds
-    box_width = max_x - min_x
-    box_height = max_y - min_y
-    x_center = min_x + box_width / 2
-    y_center = min_y + box_height / 2
+    inv = ~transform
+    corners = [inv @ (min_x, min_y), inv @ (min_x, max_y), inv @ (max_x, min_y), inv @ (max_x, max_y)]
+    xs = [c[0] for c in corners]
+    ys = [c[1] for c in corners]
+    px_min_x, px_max_x = min(xs), max(xs)
+    px_min_y, px_max_y = min(ys), max(ys)
+
+    box_width = px_max_x - px_min_x
+    box_height = px_max_y - px_min_y
+    x_center = px_min_x + box_width / 2
+    y_center = px_min_y + box_height / 2
     return (
         class_id,
         x_center / image_width,
@@ -67,13 +88,14 @@ def polygons_to_yolo_boxes(
     polygons: Iterable[BaseGeometry],
     image_width: int,
     image_height: int,
+    transform: Affine,
     class_id: int = 0,
 ) -> list[tuple[int, float, float, float, float]]:
     """polygon_to_yolo_box for every polygon in the chip -- one line per
-    building in the resulting YOLO label file, same source geometries as
-    rasterize_polygons() so both label formats describe the same
-    buildings."""
-    return [polygon_to_yolo_box(p, image_width, image_height, class_id) for p in polygons]
+    building in the resulting YOLO label file, same source geometries
+    (and the same transform) as rasterize_polygons() so both label
+    formats describe the same buildings, in the same pixel grid."""
+    return [polygon_to_yolo_box(p, image_width, image_height, transform, class_id) for p in polygons]
 
 
 def format_yolo_label_file(boxes: Iterable[tuple[int, float, float, float, float]]) -> str:
