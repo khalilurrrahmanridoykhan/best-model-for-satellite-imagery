@@ -44,6 +44,8 @@ data/yolo/labels/*
 !data/unet/masks/.gitkeep
 !data/yolo/images/.gitkeep
 !data/yolo/labels/.gitkeep
+data/split.json
+data/yolo/data.yaml
 runs/
 *.pt
 *.pth
