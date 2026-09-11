@@ -1,9 +1,12 @@
-# U-Net vs YOLO — Same-Dataset Practice
+# Best Model for Satellite Imagery — U-Net vs YOLO
 
-A focused practice project: train **both** a U-Net (semantic segmentation) and a
-**YOLO** (object detection) model on the **same source labels**, so the comparison
-between them is apples-to-apples — same imagery, same real-world objects (building
-footprints), two different ways of "seeing" them.
+Picking the right model for a satellite-imagery task isn't obvious upfront: a
+segmentation model and a detection model answer different questions about the same
+imagery. This repo trains **both** a U-Net (semantic segmentation) and a **YOLO**
+(object detection) model on the **same source labels**, so the comparison between them
+is apples-to-apples — same imagery, same real-world objects (building footprints), two
+different ways of "seeing" them — and draws an honest conclusion about which one fits
+which question.
 
 - **U-Net** answers: *which pixels are building?*
 - **YOLO** answers: *where are the individual buildings, as countable objects?*
@@ -72,9 +75,13 @@ See [`RESULTS.md`](RESULTS.md) — smoke-test numbers only, not real results yet
 
 ## Why this exists
 
-Part of a larger, ongoing geospatial-AI-for-public-health learning track. This repo is
-the standalone warm-up: same dataset, same labels, two model families, one clean
-comparison -- before applying both to a real dengue/flood risk-mapping pipeline.
+Choosing between a segmentation model and a detection model for a satellite-imagery
+task is a real decision, not a formality — they optimize for different outputs
+(pixel-accurate footprints vs. countable object instances) and cost different amounts
+of compute to train. This repo builds the evidence for that decision from one
+controlled, same-dataset comparison, and feeds directly into a larger
+geospatial-AI-for-public-health track that needs to make exactly this call for a real
+dengue/flood risk-mapping pipeline.
 
 ## License
 

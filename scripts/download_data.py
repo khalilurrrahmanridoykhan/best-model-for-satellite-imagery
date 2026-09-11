@@ -9,8 +9,8 @@ training tarball for this AOI. SpaceNet also publishes a STAC catalog
 JSON reveals that every chip's image and label are independently
 addressable objects under spacenet/SN2_buildings/train/AOI_2_Vegas/ --
 verified directly against the real bucket, not assumed -- which is what
-makes "a few hundred chips for practice" an actual few-hundred-MB
-download instead of an overnight one.
+makes downloading a few hundred chips an actual few-hundred-MB download
+instead of an overnight one.
 
 Usage:
     python scripts/download_data.py --n 300
@@ -44,8 +44,8 @@ def list_available_chip_ids(client, limit: int | None = None) -> list[int]:
     """Chip ids are not contiguous (some numbers are missing from the
     bucket entirely) -- lists the real image objects that exist rather
     than assuming a clean 1..N range. Stops paginating early once `limit`
-    ids are found, so requesting a small practice subset doesn't require
-    listing all ~3,850 objects in the AOI first.
+    ids are found, so requesting a small subset doesn't require listing
+    all ~3,850 objects in the AOI first.
     """
     paginator = client.get_paginator("list_objects_v2")
     ids: list[int] = []

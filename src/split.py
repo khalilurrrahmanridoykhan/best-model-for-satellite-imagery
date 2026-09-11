@@ -1,7 +1,6 @@
 """Splits SpaceNet chip ids into train/val/test sets, once, shared by both
 the U-Net and YOLO data-prep pipelines -- the whole reason both models
-end up evaluated on the exact same held-out chips. See the practice
-plan's pitfall on spatial data leakage: splitting by anything finer than
+end up evaluated on the exact same held-out chips. Splitting by anything finer than
 a whole chip (e.g. by individual building or pixel) lets buildings in
 the same tile leak between splits and makes both models' scores look
 better than they really are.
