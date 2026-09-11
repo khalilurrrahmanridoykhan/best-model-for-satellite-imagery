@@ -1,20 +1,25 @@
+# All versions below are pinned to what was actually installed and
+# verified (full test suite green, both training notebooks smoke-tested)
+# on 2026-09-11 -- not guessed.
+
 # Data / geo
-rasterio==1.4.3
-geopandas==1.0.1
-shapely==2.0.6
-boto3==1.35.74  # anonymous S3 access for scripts/download_data.py
+rasterio==1.5.1
+geopandas==1.1.4
+shapely==2.1.2
+boto3==1.43.92  # anonymous S3 access for scripts/download_data.py
+Pillow==11.0.0
 
 # Viz
-matplotlib==3.9.2
+matplotlib==3.11.1
 
-# Deep learning -- training itself is meant to run on a free GPU notebook
+# Deep learning -- actual training is meant to run on a free GPU notebook
 # (Colab/Kaggle), but these are also needed locally to unit-test the label
 # pipeline in src/ and to run inference/comparison against trained weights.
-torch==2.5.1
-torchvision==0.20.1
-segmentation-models-pytorch==0.3.4
-albumentations==1.4.21
-ultralytics==8.3.40
+torch==2.14.0
+torchvision==0.29.0
+segmentation-models-pytorch==0.5.0
+albumentations==2.0.8
+ultralytics==8.4.147
 
 # Tests
-pytest==8.3.3
+pytest==9.1.1
