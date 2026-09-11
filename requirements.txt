@@ -1,0 +1,19 @@
+# Data / geo
+rasterio==1.4.3
+geopandas==1.0.1
+shapely==2.0.6
+
+# Viz
+matplotlib==3.9.2
+
+# Deep learning -- training itself is meant to run on a free GPU notebook
+# (Colab/Kaggle), but these are also needed locally to unit-test the label
+# pipeline in src/ and to run inference/comparison against trained weights.
+torch==2.5.1
+torchvision==0.20.1
+segmentation-models-pytorch==0.3.4
+albumentations==1.4.21
+ultralytics==8.3.40
+
+# Tests
+pytest==8.3.3

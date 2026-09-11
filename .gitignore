@@ -1,0 +1,50 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# mypy / type checkers
+.mypy_cache/
+
+# OS cruft
+.DS_Store
+
+# ---------------------------------------------------------------------------
+# Project-specific: downloaded imagery, generated labels, and trained model
+# weights are all reproducible from scripts/notebooks -- never committed.
+# See README.md for how to regenerate everything under data/ and runs/.
+# ---------------------------------------------------------------------------
+data/raw/*
+data/unet/images/*
+data/unet/masks/*
+data/yolo/images/*
+data/yolo/labels/*
+!data/raw/.gitkeep
+!data/unet/images/.gitkeep
+!data/unet/masks/.gitkeep
+!data/yolo/images/.gitkeep
+!data/yolo/labels/.gitkeep
+runs/
+*.pt
+*.pth
+*.onnx
