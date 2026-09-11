@@ -14,9 +14,11 @@ outputs then diverge — is the actual point of this repo, not just "trained two
 
 ## Dataset
 
-[SpaceNet Buildings](https://spacenet.ai/datasets/) (v2, Las Vegas AOI) — free, public,
-one building-footprint polygon per building already provided. See
-[`scripts/download_data.sh`](scripts/download_data.sh) to fetch it; raw imagery is not
+[SpaceNet Buildings v2](https://spacenet.ai/datasets/) (AOI_2_Vegas) — free, public,
+one building-footprint polygon per building already provided. Individual chips and
+labels are pulled directly from the public `spacenet-dataset` S3 bucket (anonymous
+access, no AWS account needed) by [`scripts/download_data.py`](scripts/download_data.py),
+rather than downloading the official 25.6GB training tarball. Raw imagery is not
 committed to this repo (see `.gitignore`) since it's fully reproducible from that
 script.
 
@@ -52,16 +54,21 @@ pip install -r requirements.txt
 # Unit tests for the label pipeline -- no dataset download needed, uses synthetic data
 pytest tests/ -v
 
-# The real dataset (needed for the notebooks)
-bash scripts/download_data.sh
+# The real dataset (needed for the notebooks) -- downloads N chips + their
+# GeoJSON labels from the public SpaceNet S3 bucket
+python scripts/download_data.py --n 300
 ```
 
-Then run the notebooks in order. `03` and `04` (the actual training) are meant to run
-on a free GPU notebook (Google Colab or Kaggle) rather than a local CPU.
+Then run the notebooks in order (`jupyter notebook` or `jupyter nbconvert --execute`).
+`03` and `04` (the actual training) are meant to run on a free GPU notebook (Google
+Colab or Kaggle) with the full downloaded dataset and a real epoch count — the
+versions committed to this repo were smoke-tested locally on a 20-chip sample with a
+handful of epochs each, purely to prove the pipeline runs correctly end to end. See
+[`RESULTS.md`](RESULTS.md) for exactly what that means and what a real run still needs.
 
 ## Results
 
-See [`RESULTS.md`](RESULTS.md) once training has actually been run.
+See [`RESULTS.md`](RESULTS.md) — smoke-test numbers only, not real results yet.
 
 ## Why this exists
 
