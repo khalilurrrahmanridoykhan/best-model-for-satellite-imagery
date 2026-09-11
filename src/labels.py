@@ -15,6 +15,21 @@ from rasterio.transform import Affine
 from shapely.geometry.base import BaseGeometry
 
 
+def filter_polygon_geometries(geometries: Iterable[BaseGeometry]) -> list[BaseGeometry]:
+    """Keeps only Polygon/MultiPolygon geometries. Live-observed against
+    the real downloaded SpaceNet data: labels occasionally include a
+    degenerate Point (a building footprint that collapsed to a single
+    point -- 1 in 594 geometries across a real 20-chip sample). A Point
+    produces a meaningless zero-area YOLO box, and applying it only to
+    the YOLO pipeline while leaving it in the U-Net mask would mean the
+    two label formats no longer describe the same set of buildings --
+    exactly the property this whole project depends on -- so this filter
+    is meant to be applied once, before *either* rasterize_polygons() or
+    polygons_to_yolo_boxes(), not separately to each.
+    """
+    return [g for g in geometries if g.geom_type in ("Polygon", "MultiPolygon")]
+
+
 def rasterize_polygons(
     polygons: Iterable[BaseGeometry],
     height: int,

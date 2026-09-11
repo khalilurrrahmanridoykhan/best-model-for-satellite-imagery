@@ -6,9 +6,10 @@ is correct.
 import numpy as np
 import pytest
 from rasterio.transform import Affine
-from shapely.geometry import Polygon
+from shapely.geometry import LineString, Point, Polygon
 
 from src.labels import (
+    filter_polygon_geometries,
     format_yolo_label_file,
     polygon_to_yolo_box,
     polygons_to_yolo_boxes,
@@ -27,6 +28,33 @@ IDENTITY_TRANSFORM = Affine.identity()
 # which silently hid a real unit-mismatch bug that only showed up
 # against the actual downloaded SpaceNet data.
 GEOREFERENCED_TRANSFORM = Affine(1.0761e-05, 0.0, -115.3075176, 0.0, -1.0761e-05, 36.1282976997)
+
+
+def test_filter_polygon_geometries_drops_a_degenerate_point():
+    """Live-observed against the real downloaded SpaceNet data: 1 in 594
+    label geometries was a Point, not a Polygon -- a building footprint
+    that collapsed to a single point. It must not reach either label
+    pipeline, since a Point produces a meaningless zero-area YOLO box."""
+    poly = Polygon([(0, 0), (0, 1), (1, 1), (1, 0)])
+    point = Point(5, 5)
+
+    result = filter_polygon_geometries([poly, point])
+
+    assert result == [poly]
+
+
+def test_filter_polygon_geometries_keeps_multipolygons():
+    from shapely.geometry import MultiPolygon
+
+    poly = Polygon([(0, 0), (0, 1), (1, 1), (1, 0)])
+    multi = MultiPolygon([poly])
+
+    assert filter_polygon_geometries([multi]) == [multi]
+
+
+def test_filter_polygon_geometries_drops_lines_too():
+    line = LineString([(0, 0), (1, 1)])
+    assert filter_polygon_geometries([line]) == []
 
 
 def test_rasterize_polygons_burns_a_square_into_the_mask():
@@ -102,6 +130,41 @@ def test_polygon_to_yolo_box_handles_a_real_georeferenced_transform():
     assert 0.0 <= y <= 1.0
     assert w == pytest.approx(1.0, abs=1e-6)
     assert h == pytest.approx(1.0, abs=1e-6)
+
+
+def test_rasterize_polygons_handles_a_multipolygon():
+    """Live-observed in the real downloaded SpaceNet data: 3 of 594 real
+    label geometries were MultiPolygon (one building split into
+    disjoint parts) -- both parts must actually get burned into the
+    mask, not just one."""
+    from shapely.geometry import MultiPolygon
+
+    part_a = Polygon([(1, 1), (1, 3), (3, 3), (3, 1)])
+    part_b = Polygon([(6, 6), (6, 8), (8, 8), (8, 6)])
+    multi = MultiPolygon([part_a, part_b])
+
+    mask = rasterize_polygons([multi], height=10, width=10, transform=IDENTITY_TRANSFORM)
+
+    assert mask[2, 2] == 1  # inside part_a
+    assert mask[7, 7] == 1  # inside part_b
+
+
+def test_polygon_to_yolo_box_handles_a_multipolygon():
+    """A MultiPolygon's bounding box should span all of its parts, not
+    just the first one."""
+    from shapely.geometry import MultiPolygon
+
+    part_a = Polygon([(1, 1), (1, 3), (3, 3), (3, 1)])
+    part_b = Polygon([(6, 6), (6, 8), (8, 8), (8, 6)])
+    multi = MultiPolygon([part_a, part_b])
+
+    cls, x, y, w, h = polygon_to_yolo_box(multi, image_width=10, image_height=10, transform=IDENTITY_TRANSFORM)
+
+    # overall bbox is (1,1)-(8,8): center (4.5,4.5), size (7,7), on a 10x10 image
+    assert x == pytest.approx(0.45)
+    assert y == pytest.approx(0.45)
+    assert w == pytest.approx(0.70)
+    assert h == pytest.approx(0.70)
 
 
 def test_polygons_to_yolo_boxes_returns_one_box_per_polygon_in_order():
